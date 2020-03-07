@@ -14,7 +14,7 @@
  *======================================
  *(HOW TO USE AND INSTRUCTIONS)
  * now this function has a four parm
- * first :  $array as is it clear you must pass an array holding fields and values
+ * FIRST PPRAM :  $array as is it clear you must pass an array holding fields and values
  *
  * for example : table users has three fields username , password , email and i wanna add a new user
  * so i must array like this
@@ -52,6 +52,61 @@
  *(SELECT * FROM `users` WHERE `username` = 'khaled' AND `password` = '1234';)
  *
  * if no match happen it will return (no row found)
+ * *****************************************************************
+ * in update case it's a little bit different
+ *
+ * You MUST send and multi dimension array
+ *
+ * the first dimension MUST BE THE VALUES
+ *
+ * the second dimension MUST BE THE CONDITION'S
+ *
+ * (example)
+ *
+ *$data =array('username'=>'khaled','password'=>'1234','conditions'=>array('id'=>'2'));
+ *
+ * $userinfo = new DB();
+ *
+ * $res = $userinfo->operation($data,'users','update')
+ *
+ * it should return string (done) for this case
+ *
+ * in otherwise $res will return string like (try again ,the conditions has no value,You must send conditions)
+ * OR it just gonna return bool=> false
+ * it depends on the case
+ *
+ * 1- (try again)
+ * it means that you did every thing right but no effected rows in db
+ *
+ * 2- (the conditions has no value)
+ * it means you sent an array with conditions key and this key not an array or array
+ * but contain no value
+ *
+ * 3- (You must send conditions)
+ * means you didn't send into the array conditions key
+ *
+ * 4-bool => false
+ * means that you send an one dimension
+ *
+ *
+ *================================================================================
+ *
+ * SECOND PRAM : it simply the table name used into your db
+ *
+ * ===============================================================================
+ *
+ * THIRD PRAM : it's the operation you wanna do
+ *
+ * if you want to use insert statment that pram MUST be
+ * ( add )=> never mind you can write it at any case you want uppercase or camel case
+ *
+ * but it must be the(add)word at any case
+ * *****************************************************************
+ * if you want to use update statment that pram MUST be
+ *
+ * (update)=> like (add) it should be the (update) word at any case you comfort with
+ *
+ * ******************************************************************
  */
 require 'config.php';
 class DB
@@ -67,9 +122,10 @@ class DB
         }
         return $this->con;
     }
-    private function query($array ,$table ,$op,$extracond='')
+    private function query($array ,$table ,$ope,$extracond='')
     {
         $count = count($array);
+        $op = strtolower($ope);
         if($count <= 1 && $op =='update')
         {
             return $errormsg = false;
@@ -103,47 +159,48 @@ class DB
         }
         elseif ($op == 'update')
         {
-            $queryf ="UPDATE `$table` SET ";
-            $querym = '';
-            $cond =' WHERE ';
-            foreach ($array as $key=>$value)
+            if(array_key_exists('conditions',$array))
             {
-                if (!is_array($value))
-                {
-                    if ($count-1 > 1)
-                    {
-                        $querym .= "`$key` = '$value',";
+                if (is_array($array['conditions']) && count($array['conditions']) >= 1) {
+                    $queryf = "UPDATE `$table` SET ";
+                    $querym = '';
+                    $cond = ' WHERE ';
+                    foreach ($array as $key => $value) {
+                        if (!is_array($value)) {
+                            if ($count - 1 > 1) {
+                                $querym .= "`$key` = '$value',";
+                            } else {
+                                $querym .= "`$key` = '$value'";
+                            }
+                        } else {
+                            $countcons = $count2 = count($value);
+                            foreach ($value as $feild => $fvalue) {
+                                if ($count2 > 1) {
+                                    $cond .= "`$feild`='$fvalue' AND ";
+                                    $count2--;
+                                } else {
+                                    $cond .= "`$feild` = '$fvalue'";
+                                }
+                            }
+                        }
+                        $count--;
                     }
-                    else
-                    {
-                        $querym .= "`$key` = '$value'";
+                    $query = $queryf . $querym . $cond;
+                    $this->con->query($query);
+                    if ($this->con->affected_rows > 0) {
+                        return 'done';
                     }
+                    return 'try again';
                 }
                 else
                 {
-                    $countcons = $count2 = count($value);
-                    foreach ($value as $feild =>$fvalue)
-                    {
-                        if ($count2 > 1)
-                        {
-                            $cond.="`$feild`='$fvalue' AND ";
-                            $count2 --;
-                        }
-                        else
-                        {
-                            $cond .= "`$feild` = '$fvalue'";
-                        }
-                    }
+                    return'the conditions has no value';
                 }
-                $count--;
             }
-            $query =$queryf.$querym.$cond;
-            $this->con->query($query);
-            if ($this->con->affected_rows > 0)
+            else
             {
-                return'done';
+                return'You must send conditions';
             }
-            return 'try again';
         }
         elseif ($op == 'delete')
         {
@@ -288,8 +345,10 @@ class DB
             }
         }
     }
-    public function opretion($array ,$table ,$op,$extracond='')
+    public function operation($array ,$table ,$op,$extracond='')
     {
-        $this->query($array , $table ,$op ,$extracond);
+        $res = $this->query($array , $table ,$op ,$extracond);
+
+        return $res;
     }
 }
