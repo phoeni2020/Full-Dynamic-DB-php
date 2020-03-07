@@ -43,17 +43,16 @@
  * $res = $user->query($data,'users','getbycond','AND');
  *
  * $_SESSION['username']=$res[0]['username'];
- * 
+ *
  * as you see to store username in a session i accsess first array offset[0]thenindex['username']
- * 
+ *
  * it's mean the result will be an multi dimension array
- * 
+ *
  * So the query  gonna be like this
  *(SELECT * FROM `users` WHERE `username` = 'khaled' AND `password` = '1234';)
- * 
+ *
  * if no match happen it will return (no row found)
  */
-require 'config.php';
 require 'config.php';
 class DB
 {
@@ -68,7 +67,7 @@ class DB
         }
         return $this->con;
     }
-    public function query($array ,$table ,$op,$extracond='')
+    private function query($array ,$table ,$op,$extracond='')
     {
         $count = count($array);
         if($count <= 1 && $op =='update')
@@ -197,7 +196,7 @@ class DB
                         {
                             if ($count - 1 >= 1)
                             {
-                               $cond .= "`$key` = '$value' $condoption ";
+                                $cond .= "`$key` = '$value' $condoption ";
                             }
                             else
                             {
@@ -225,35 +224,37 @@ class DB
                     $valuestoget = $array[0];
                     $condtions = $array[1];
                     $values = '';
-                    $queryf ="SELECT $value FROM `$table`";
                     if(is_array($valuestoget)&&is_array($condtions))
                     {
+                        $count1 = count($valuestoget);
+                        $count2 = count($condtions);
                         foreach ($condtions as $key => $value)
                         {
-                            if ($count - 1 > 1)
+                            if ($count2 - 1 >= 1)
                             {
-                                $cond .= "`$key` = '$value' AND";
+                                $cond .= "`$key` = ' $value ' $extracond";
                             }
                             else
                             {
                                 $cond .= "`$key` = '$value'";
                             }
-                            $count--;
+                            $count2--;
                         }
                         foreach ($valuestoget as $value)
                         {
-                            if ($count - 1 > 1)
+                            if ($count1 - 1 >= 1)
                             {
-                                $values .= "`$value`,";
+                                $values .= " `$value` , ";
                             }
                             else
                             {
-                                $values .= "`$value`";
+                                $values .= " `$value` ";
                             }
-                            $count--;
+                            $count1--;
                         }
-                        $query = $queryf .$values.$cond;
-                        $res = $this->con->query($queryf);
+                        $queryf ="SELECT $values FROM `$table`";
+                        $query = $queryf .' WHERE '.$cond;
+                        $res = $this->con->query($query);
                         if($res->num_rows > 0)
                         {
                             $records = array();
@@ -286,5 +287,9 @@ class DB
                 }
             }
         }
+    }
+    public function opretion($array ,$table ,$op,$extracond='')
+    {
+        $this->query($array , $table ,$op ,$extracond);
     }
 }
