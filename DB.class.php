@@ -132,65 +132,17 @@ class DB
         }
         if ($op =='add')
         {
-            $queryk = "INSERT INTO `$table` (";
-            $queryv = ") Values(";
-            foreach ($array as $key=>$value)
-            {
-                if($count >1)
-                {
-                    $queryk .= "`$key`,";
-                    $queryv .="'$value',";
-                }
-                else
-                {
-                    $queryk.="`$key`";
-                    $queryv.="'$value'";
-                }
-                $count--;
-            }
-            $querye =");";
-            $query = $queryk . $queryv .$querye;
-            $this->con->query($query);
-            if ($this->con->affected_rows > 0)
-            {
-                return'done';
-            }
-            return 'try again';
+            $res = $this->add($array,$table,$count);
+            return $res;
         }
         elseif ($op == 'update')
         {
             if(array_key_exists('conditions',$array))
             {
-                if (is_array($array['conditions']) && count($array['conditions']) >= 1) {
-                    $queryf = "UPDATE `$table` SET ";
-                    $querym = '';
-                    $cond = ' WHERE ';
-                    foreach ($array as $key => $value) {
-                        if (!is_array($value)) {
-                            if ($count - 1 > 1) {
-                                $querym .= "`$key` = '$value',";
-                            } else {
-                                $querym .= "`$key` = '$value'";
-                            }
-                        } else {
-                            $countcons = $count2 = count($value);
-                            foreach ($value as $feild => $fvalue) {
-                                if ($count2 > 1) {
-                                    $cond .= "`$feild`='$fvalue' AND ";
-                                    $count2--;
-                                } else {
-                                    $cond .= "`$feild` = '$fvalue'";
-                                }
-                            }
-                        }
-                        $count--;
-                    }
-                    $query = $queryf . $querym . $cond;
-                    $this->con->query($query);
-                    if ($this->con->affected_rows > 0) {
-                        return 'done';
-                    }
-                    return 'try again';
+                if (is_array($array['conditions']) && count($array['conditions']) >= 1)
+                {
+                   $res = $this->update($array,$table,$count);
+                   return $res;
                 }
                 else
                 {
@@ -204,145 +156,236 @@ class DB
         }
         elseif ($op == 'delete')
         {
-            $queryf = "DELETE FROM $table WHERE";
-            $cond='';
-            if ($count > 1)
+           $res = $this->delete($array,$table,$count);
+           return $res;
+        }
+        elseif($op== 'getallbycond')
+        {
+            $res = $this->getallbycond($array ,$table ,$count,$extracond);
+        }
+        elseif($op =='getspecific')
+        {
+            $data = $this->getspecific($array ,$table ,$extracond);
+            return $data;
+        }
+        elseif($op = 'getall')
+        {
+            $data = $this->getall($table);
+            return $data;
+        }
+        else
+        {
+            return'enter a valid operation';
+        }
+    }
+    private function add($array ,$table ,$count)
+    {
+        $queryk = "INSERT INTO `$table` (";
+        $queryv = ") Values(";
+        foreach ($array as $key=>$value)
+        {
+            if($count >1)
             {
-                foreach ($array as $key => $value)
+                $queryk .= "`$key`,";
+                $queryv .="'$value',";
+            }
+            else
+            {
+                $queryk.="`$key`";
+                $queryv.="'$value'";
+            }
+            $count--;
+        }
+        $querye =");";
+        $query = $queryk . $queryv .$querye;
+        $this->con->query($query);
+        if ($this->con->affected_rows > 0)
+        {
+            return'done';
+        }
+        return 'try again';
+    }
+    private function update($array ,$table ,$count)
+    {
+        $queryf = "UPDATE `$table` SET ";
+        $querym = '';
+        $cond = ' WHERE ';
+        foreach ($array as $key => $value) {
+            if (!is_array($value))
+            {
+                if ($count - 1 > 1)
                 {
-                    if ($count ==1)
-                    {
-                        $cond .="`$key` = '$value';";
-                    }
-                    else
-                    {
-                        $cond .="`$key` = '$value' AND";
-                    }
-                    $count--;
+                    $querym .= "`$key` = '$value',";
+                }
+                else
+                {
+                    $querym .= "`$key` = '$value'";
                 }
             }
             else
             {
-                $ar='';
-                $ar = array_keys($array);
-                $value =$array[$ar[0]];
-                $cond="`$ar[0]`= '$value'";
-            }
-            $query = $queryf.$cond;
-            $this->con->query($query);
-            if ($this->con->affected_rows > 0)
-            {
-                return'done';
-            }
-            return 'try again';
-        }
-        elseif($op== 'getbycond')
-        {
-            $value = '';
-            $queryf ="SELECT * FROM `$table`";
-            $cond = '';
-            if ($count != 0)
-            {
-                if($array[0] == '*')
+                $countcons = $count2 = count($value);
+                foreach ($value as $feild => $fvalue)
                 {
-                    $condoption =" $extracond ";
-                    $condtions = $array[1];
-                    if (is_array($condtions))
+                    if ($count2 > 1)
                     {
-                        foreach ($condtions as $key => $value)
-                        {
-                            if ($count - 1 >= 1)
-                            {
-                                $cond .= "`$key` = '$value' $condoption ";
-                            }
-                            else
-                            {
-                                $cond .= "`$key` = '$value'";
-                            }
-                            $count--;
-                        }
-                        $query =$queryf.' WHERE '.$cond;
-                        $res  =  $this->con->query($query);
-
-                        if($res->num_rows > 0)
-                        {
-                            $records = array();
-                            while ($record = $res->fetch_assoc())
-                            {
-                                $records[]=$record;
-                            }
-                            return $records;
-                        }
-                        return 'no row found';
-                    }
-                }
-                else
-                {
-                    $valuestoget = $array[0];
-                    $condtions = $array[1];
-                    $values = '';
-                    if(is_array($valuestoget)&&is_array($condtions))
-                    {
-                        $count1 = count($valuestoget);
-                        $count2 = count($condtions);
-                        foreach ($condtions as $key => $value)
-                        {
-                            if ($count2 - 1 >= 1)
-                            {
-                                $cond .= "`$key` = ' $value ' $extracond";
-                            }
-                            else
-                            {
-                                $cond .= "`$key` = '$value'";
-                            }
-                            $count2--;
-                        }
-                        foreach ($valuestoget as $value)
-                        {
-                            if ($count1 - 1 >= 1)
-                            {
-                                $values .= " `$value` , ";
-                            }
-                            else
-                            {
-                                $values .= " `$value` ";
-                            }
-                            $count1--;
-                        }
-                        $queryf ="SELECT $values FROM `$table`";
-                        $query = $queryf .' WHERE '.$cond;
-                        $res = $this->con->query($query);
-                        if($res->num_rows > 0)
-                        {
-                            $records = array();
-                            while ($record = $res->fetch_assoc())
-                            {
-                                $records[]=$record;
-                            }
-
-                            return $records;
-                        }
+                        $cond .= "`$feild`='$fvalue' AND ";
+                        $count2--;
                     }
                     else
                     {
-                        return'sorry You need to pass all info you want';
+                        $cond .= "`$feild` = '$fvalue'";
                     }
                 }
             }
-            elseif($op = 'getall')
+            $count--;
+        }
+        $query = $queryf . $querym . $cond;
+        $this->con->query($query);
+        if ($this->con->affected_rows > 0) {
+            return true;
+        }
+        return false;
+    }
+    private function delete($array ,$table ,$count)
+    {
+        $queryf = "DELETE FROM $table WHERE";
+        $cond='';
+        if ($count > 1)
+        {
+            foreach ($array as $key => $value)
             {
-
-                $res = $this->con->query($queryf);
-                if($res->num_rows > 0)
+                if ($count ==1)
                 {
-                    $records = array();
-                    while ($record = $res->fetch_assoc())
+                    $cond .="`$key` = '$value';";
+                }
+                else
+                {
+                    $cond .="`$key` = '$value' AND";
+                }
+                $count--;
+            }
+        }
+        else
+        {
+            $ar='';
+            $ar = array_keys($array);
+            $value =$array[$ar[0]];
+            $cond="`$ar[0]`= '$value'";
+        }
+        $query = $queryf.$cond;
+        $this->con->query($query);
+        if ($this->con->affected_rows > 0)
+        {
+            return'done';
+        }
+        return 'try again';
+    }
+    private function getallbycond($array ,$table ,$count,$extracond)
+    {
+        $value = '';
+        $queryf ="SELECT * FROM `$table`";
+        $cond = '';
+        if ($count != 0)
+        {
+            if($array[0] == '*')
+            {
+                $condoption =" $extracond ";
+                $condtions = $array[1];
+                if (is_array($condtions))
+                {
+                    foreach ($condtions as $key => $value)
                     {
-                        $records[]=$record;
+                        if ($count - 1 >= 1)
+                        {
+                            $cond .= "`$key` = '$value' $condoption ";
+                        }
+                        else
+                        {
+                            $cond .= "`$key` = '$value'";
+                        }
+                        $count--;
                     }
-                    return $records;
+                    $query =$queryf.' WHERE '.$cond;
+                    $res  =  $this->con->query($query);
+
+                    if($res->num_rows > 0)
+                    {
+                        $records = array();
+                        while ($record = $res->fetch_assoc())
+                        {
+                            $records[]=$record;
+                        }
+                        return $records;
+                    }
+                    return 'no row found';
                 }
             }
+        }
+        return false;
+    }
+    private function getspecific($array ,$table ,$extracond)
+    {
+        $valuestoget = $array[0];
+        $condtions = $array[1];
+        $values = '';
+        $cond = '';
+        if(is_array($valuestoget)&&is_array($condtions))
+        {
+            $count1 = count($valuestoget);
+            $count2 = count($condtions);
+            foreach ($condtions as $key => $value)
+            {
+                if ($count2 - 1 >= 1)
+                {
+                    $cond .= "`$key` = ' $value ' $extracond";
+                }
+                else
+                {
+                    $cond .= "`$key` = '$value'";
+                }
+                $count2--;
+            }
+            foreach ($valuestoget as $value)
+            {
+                if ($count1 - 1 >= 1)
+                {
+                    $values .= " `$value` , ";
+                }
+                else
+                {
+                    $values .= " `$value` ";
+                }
+                $count1--;
+            }
+            $queryf ="SELECT $values FROM `$table`";
+            $query = $queryf .' WHERE '.$cond;
+            $res = $this->con->query($query);
+            if($res->num_rows > 0)
+            {
+                $records = array();
+                while ($record = $res->fetch_assoc())
+                {
+                    $records[]=$record;
+                }
+
+                return $records;
+            }
+        }
+        return false;
+    }
+    private function getall($table)
+    {
+        $query ="SELECT * FROM `$table`";
+        $res = $this->con->query($query);
+        if($res->num_rows > 0)
+        {
+            $records = array();
+            while ($record = $res->fetch_assoc())
+            {
+                $records[]=$record;
+            }
+            return $records;
         }
     }
     public function operation($array ,$table ,$op,$extracond='')
