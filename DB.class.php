@@ -122,9 +122,9 @@ class DB
         }
         return $this->con;
     }
-    private function query($array ,$table ,$ope,$extracond='')
+    private function query($array='' ,$table ,$ope,$extracond='')
     {
-        $count = count($array);
+        is_array($array) ? $count = count($array) : $count = 0;
         $op = strtolower($ope);
         if($count <= 1 && $op =='update')
         {
@@ -141,8 +141,8 @@ class DB
             {
                 if (is_array($array['conditions']) && count($array['conditions']) >= 1)
                 {
-                   $res = $this->update($array,$table,$count);
-                   return $res;
+                    $res = $this->update($array,$table,$count);
+                    return $res;
                 }
                 else
                 {
@@ -156,12 +156,13 @@ class DB
         }
         elseif ($op == 'delete')
         {
-           $res = $this->delete($array,$table,$count);
-           return $res;
+            $res = $this->delete($array,$table,$count);
+            return $res;
         }
         elseif($op== 'getallbycond')
         {
             $res = $this->getallbycond($array ,$table ,$count,$extracond);
+            return $res;
         }
         elseif($op =='getspecific')
         {
@@ -170,7 +171,7 @@ class DB
         }
         elseif($op = 'getall')
         {
-            $data = $this->getall($table);
+            $data = $this->getall($table,$extracond);
             return $data;
         }
         else
@@ -201,9 +202,9 @@ class DB
         $this->con->query($query);
         if ($this->con->affected_rows > 0)
         {
-            return'done';
+            return true;
         }
-        return 'try again';
+        return false;
     }
     private function update($array ,$table ,$count)
     {
@@ -294,6 +295,7 @@ class DB
                 $condtions = $array[1];
                 if (is_array($condtions))
                 {
+                    $count = count($condtions);
                     foreach ($condtions as $key => $value)
                     {
                         if ($count - 1 >= 1)
@@ -308,7 +310,6 @@ class DB
                     }
                     $query =$queryf.' WHERE '.$cond;
                     $res  =  $this->con->query($query);
-
                     if($res->num_rows > 0)
                     {
                         $records = array();
@@ -368,15 +369,14 @@ class DB
                 {
                     $records[]=$record;
                 }
-
                 return $records;
             }
         }
         return false;
     }
-    private function getall($table)
+    private function getall($table,$limit='')
     {
-        $query ="SELECT * FROM `$table`";
+        $query ="SELECT * FROM `$table`$limit ";
         $res = $this->con->query($query);
         if($res->num_rows > 0)
         {
@@ -388,10 +388,13 @@ class DB
             return $records;
         }
     }
-    public function operation($array ,$table ,$op,$extracond='')
+    public function operation($array='' ,$table ,$op,$extracond='')
     {
         $res = $this->query($array , $table ,$op ,$extracond);
-
         return $res;
+    }
+    public function __destruct()
+    {
+        $this->con->close();
     }
 }
